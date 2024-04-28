@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 class UserInfo(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     adress = models.CharField(max_length=200)
+    isRestaurant = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=10)
 
 class Restaurant(models.Model):
@@ -15,6 +16,14 @@ class Restaurant(models.Model):
     def __str__(self) -> str:
         return self.restaurant_name
 
+class RestaurantUserRelation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        return f"{self.user.username} : {self.restaurant.restaurant_name}"
+
+
 class RestaurantTags(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     tags = models.CharField(max_length=50)
@@ -24,7 +33,8 @@ class RestaurantTags(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    status = models.CharField(max_length=1000, default="Order Recieved")
+    status = models.CharField(max_length=1000, default="Out for delivery")
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, null=True)
     def __str__(self) -> str:
         return self.user.username
 

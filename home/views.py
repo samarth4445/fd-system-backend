@@ -7,6 +7,12 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponseRedirect, HttpResponseForbidden, JsonResponse
+from django.urls import reverse
+
+
 
 
 from .models import Restaurant
@@ -31,6 +37,172 @@ def index(request):
         }
 
     return Response(coursers)
+
+def AdminLogin(request):
+    if (request.method == 'POST'):
+        username = request.POST["email"]
+        password = request.POST["password"]
+
+        user = authenticate(request, username=username, password=password)
+
+        if not RestaurantUserRelation.objects.filter(user=user).exists():
+            return render(request, 'home/login.html', {
+                'error': True
+            })
+
+        if user is not None:
+            login(request, user)
+            return HttpResponseRedirect(reverse('user'))
+        else:
+            return render(request, 'home/login.html', {
+                'error': True
+            })
+
+    return render(request, 'home/login.html', {
+        'error': False
+    })
+
+def UserPage(request):
+    if request.method == "POST":
+        name = request.POST["name"]
+        desription = request.POST["description"]
+        price = request.POST["price"]
+        user = request.user
+
+        restaurant = RestaurantUserRelation.objects.get(user=user).restaurant
+
+        RestaurantItems.objects.create(
+            item_name = name,
+            item_description = desription,
+            item_price = price,
+            restaurant = restaurant
+        )
+
+    return render(request, 'home/admin.html')
+
+def ListItemPage(request):
+    user = request.user
+    restaurant = RestaurantUserRelation.objects.get(user=user).restaurant
+
+    restaurant_items = RestaurantItems.objects.filter(restaurant=restaurant)
+
+    return render(request, 'home/list_items.html', {
+        "items": restaurant_items
+    })
+
+def OrdersPage(request):
+    orders_list = []
+    user = request.user
+
+    restaurant = RestaurantUserRelation.objects.get(user=user).restaurant
+    orders = Order.objects.filter(restaurant=restaurant)
+    
+    for order in orders:
+        order_items = OrderItems.objects.filter(orders=order)
+        print(order_items)
+        order_price = 0
+        order_obj = []
+        done = {}
+
+        for order_item in order_items:
+            if(order_item.item.id in done):
+                continue
+            quant = 0
+            done[order_item.item.id] = 1
+
+            for od in order_items:
+                if od.item.id == order_item.item.id:
+                    quant += 1
+
+            order_obj.append({
+                "name": order_item.item.item_name, 
+                "quantity": quant
+                })
+            order_price += order_item.item.item_price
+        orders_list.append({"items": order_obj, "amount": order_price, "status": order.status, "id": order.id})
+    
+    print(orders_list)
+
+
+    orders_string_array = []
+
+    for order in orders_list:
+        str_order = ""
+        l = 0
+        for item in order["items"]:
+            # print(item["quantity"])
+            str_order += item["name"] + " x " + str(item["quantity"]) + ", "
+            l += 1
+        print(order["status"])
+        orders_string_array.append({
+            "id": order["id"],
+            "string": str_order,
+            "amount": order["amount"],
+            "status": order["status"],
+            "items": l,
+        })
+
+    return render(request, 'home/orders.html', {
+        "orders": orders_string_array,
+    })
+
+class OrderByRestaurant(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+        orders_list = []
+
+        data = request.data
+
+        restaurant = Restaurant.objects.get(id=data["restaurant_id"])
+
+        orders = Order.objects.filter(restaurant=restaurant)
+        
+        for order in orders:
+            order_items = OrderItems.objects.filter(orders=order)
+            print(order_items)
+            order_price = 0
+            order_obj = []
+            done = {}
+
+            for order_item in order_items:
+                if(order_item.item.id in done):
+                    continue
+                quant = 0
+                done[order_item.item.id] = 1
+
+                for od in order_items:
+                    if od.item.id == order_item.item.id:
+                        quant += 1
+
+                order_obj.append({
+                    "name": order_item.item.item_name, 
+                    "quantity": quant
+                    })
+                order_price += order_item.item.item_price
+            orders_list.append({"items": order_obj, "amount": order_price, "status": order.status})
+        
+        print(orders_list)
+
+
+        orders_string_array = []
+    
+        for order in orders_list:
+            str_order = ""
+            for item in order["items"]:
+                # print(item["quantity"])
+                str_order += item["name"] + " x " + str(item["quantity"]) + " "
+            orders_string_array.append({
+                "string": str_order,
+                "amount": order["amount"],
+                "status": order["status"]
+            })
+        
+        print(orders_string_array)
+
+        return Response(orders_list)
+
 
 class OrderByUserView(APIView):
     permission_classes = [IsAuthenticated]
@@ -75,8 +247,10 @@ class OrderView(APIView):
     authentication_classes = [TokenAuthentication]
     def post(self, request):
         restaurant_order = request.data
+        restaurant = Restaurant.objects.get(id=request.data["restaurant"])
         order = Order.objects.create(
             user=request.user,
+            restaurant=restaurant
         )
 
         print(restaurant_order["order"])
@@ -98,6 +272,7 @@ class OrderView(APIView):
             "success": True, 
             "message": "Order has been created!"
         })
+
 
 class LoginAPI(APIView):
     def post(self, request):
@@ -127,6 +302,31 @@ class RegisterAPI(APIView):
 
         return Response({'success': True, 'message': "user created"}, 201)
 
+class CreateItemAPI(APIView):
+    def post(self, request):
+        data = request.data
+        serializer = CreateItemSerializer(data = data)
+
+        if not serializer.is_valid():
+            return Response({'success': False, "messsage": serializer.errors}, 400)
+
+        serializer.save()
+
+        return Response({'success': True, 'message': "item created"}, 201)
+
+
+class RegisterRestaurantAPI(APIView):
+    def post(self, request):
+        data = request.data
+        serializer = RegisterRestaurantSerializer(data = data)
+
+        if not serializer.is_valid():
+            return Response({'success': False, "messsage": serializer.errors}, 400)
+
+        serializer.save()
+        return Response({'success': True, 'message': "user and restaurant created"}, 201)
+
+
 class ItemView(APIView):
     # permission_classes = [IsAuthenticated]
     # authentication_classes = [TokenAuthentication]
@@ -150,6 +350,19 @@ class RestaurantView(APIView):
         serializer = RestaurantSerializer(objs, many=True)
 
         return Response({"restaurants": serializer.data})
+
+class ChangeOrderStatus(APIView):
+    def post(self, request):
+        data = request.data
+        id = int(data["id"])
+
+        order = Order.objects.get(id=id)
+        order.status = data["status"]
+        order.save()
+
+        return Response({
+            "message": "Done!"
+        })
 
     # def post(self, request):
     #     data = request.data

@@ -5,6 +5,8 @@ from .models import RestaurantTags
 from .models import Order
 from .models import RestaurantItems
 from .models import OrderItems
+from .models import RestaurantUserRelation
+
 
 
 # Register your models here.
@@ -14,3 +16,4 @@ admin.site.register(RestaurantTags)
 admin.site.register(Order)
 admin.site.register(RestaurantItems)
 admin.site.register(OrderItems)
+admin.site.register(RestaurantUserRelation)
