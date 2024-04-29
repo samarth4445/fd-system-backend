@@ -16,8 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from home import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('swiggy/', include('api.urls'))
+    path('swiggy/', include('api.urls')),
+    path('admin-login/', views.AdminLogin, name="login"),
+    path('admin-register/', views.AdminRegister, name="register"),
+    path('user/', views.UserPage, name="user"),
+    path('admin-items/', views.ListItemPage, name="list-items"),
+    path('orders/', views.OrdersPage, name='orders-page'),
+    path('logout/', views.Logout, name="logout"),
 ]

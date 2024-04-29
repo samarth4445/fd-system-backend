@@ -12,9 +12,5 @@ urlpatterns = [
     path('myorders/', views.OrderByUserView.as_view()),
     path('create-item/', views.CreateItemAPI.as_view()),
     path('restaurant-orders/', views.OrderByRestaurant.as_view()),
-    path('admin-login/', views.AdminLogin, name="login"),
-    path('user/', views.UserPage, name="user"),
-    path('admin-items/', views.ListItemPage, name="list-items"),
-    path('orders/', views.OrdersPage, name='orders-page'),
     path('change-status/', views.ChangeOrderStatus.as_view()),
 ]

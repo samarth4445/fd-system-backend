@@ -11,10 +11,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseRedirect, HttpResponseForbidden, JsonResponse
 from django.urls import reverse
-
-
-
-
 from .models import Restaurant
 from .serializers import *
 
@@ -62,6 +58,40 @@ def AdminLogin(request):
         'error': False
     })
 
+def AdminRegister(request):
+    if request.method == "POST":
+        username = request.POST["username"]
+        password = request.POST["password"]
+        email = request.POST["email"]
+        restaurant_name = request.POST["restaurant_name"]
+        restaurant_area = request.POST["restaurant_area"]
+        restaurant_rating = 4
+        image_link = request.POST["image_link"]
+        
+        data = {
+            "username": username,
+            "password": password,
+            "email": email,
+            "restaurant_name": restaurant_name,
+            "restaurant_area": restaurant_area,
+            "image_link": image_link,
+            "restaurant_rating": restaurant_rating
+        }
+
+        serializer = RegisterRestaurantSerializer(data = data)
+
+        if not serializer.is_valid():
+            return JsonResponse({'success': False, "messsage": serializer.errors})
+
+        serializer.save()
+        return redirect(reverse('login'))
+
+    return render(request, 'home/register.html')
+
+def Logout(request):
+    logout(request)
+    return HttpResponseRedirect(reverse('login'))
+
 def UserPage(request):
     if request.method == "POST":
         name = request.POST["name"]
@@ -89,6 +119,7 @@ def ListItemPage(request):
     return render(request, 'home/list_items.html', {
         "items": restaurant_items
     })
+    
 
 def OrdersPage(request):
     orders_list = []

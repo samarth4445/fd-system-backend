@@ -33,7 +33,7 @@ class RestaurantTags(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    status = models.CharField(max_length=1000, default="Out for delivery")
+    status = models.CharField(max_length=1000, default="Food Processing")
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, null=True)
     def __str__(self) -> str:
         return self.user.username
